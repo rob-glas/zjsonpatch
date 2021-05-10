@@ -41,6 +41,12 @@ public enum DiffFlags {
     ADD_ORIGINAL_VALUE_ON_REPLACE,
 
     /**
+     * The same functionality as above but value is inserted into <i>value</i> field instead
+     * of <i>fromValue</i>
+     */
+    ADD_ORIGINAL_VALUE_ON_REPLACE_AS_VALUE,
+
+    /**
      * This flag normalizes a {@link Operation#REPLACE} operation into its respective
      * {@link Operation#REMOVE} and {@link Operation#ADD} operations. Although it adds
      * a redundant step, this can be useful for auditing systems in which immutability
@@ -69,8 +75,14 @@ public enum DiffFlags {
      *
      * @since 0.4.8
      */
-    EMIT_TEST_OPERATIONS;
+    EMIT_TEST_OPERATIONS,
 
+    /**
+     * This flag instructs the difference generator to treat arrays that contain objects with an id
+     * as sets. This means that the order does not matter and the object is considered updated only if
+     * there is another object with the same "id", "_id" or "uuid".
+     */
+    TREAT_ARRAYS_AS_SETS;
 
     public static EnumSet<DiffFlags> defaults() {
         return EnumSet.of(OMIT_VALUE_ON_REMOVE);

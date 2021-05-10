@@ -17,17 +17,13 @@
 package com.flipkart.zjsonpatch;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.collections4.ListUtils;
 
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * User: gopi.vishwakarma
@@ -35,8 +31,12 @@ import java.util.Map;
  */
 public final class JsonDiff {
 
-    private final List<Diff> diffs = new ArrayList<Diff>();
+    private final List<Diff> diffs = new ArrayList<>();
     private final EnumSet<DiffFlags> flags;
+    private final ObjectMapper mapper = new ObjectMapper();
+    private final HashMap<String, Integer> sourceIndexById = new HashMap<>();
+    private final HashMap<String, Integer> targetIndexById = new HashMap<>();
+    private final String[] idsHandledByArrays = new String[]{"id", "_id", "uuid"};
 
     private JsonDiff(EnumSet<DiffFlags> flags) {
         this.flags = flags.clone();
@@ -335,11 +335,15 @@ public final class JsonDiff {
             case REPLACE:
                 if (flags.contains(DiffFlags.ADD_ORIGINAL_VALUE_ON_REPLACE)) {
                     jsonNode.set(Constants.FROM_VALUE, diff.getSrcValue());
+                } else if (flags.contains(DiffFlags.ADD_ORIGINAL_VALUE_ON_REPLACE_AS_VALUE)) {
+                    jsonNode.set(Constants.VALUE, diff.getSrcValue());
                 }
             case ADD:
             case TEST:
                 jsonNode.put(Constants.PATH, diff.getPath().toString());
-                jsonNode.set(Constants.VALUE, diff.getValue());
+                if (!jsonNode.has(Constants.VALUE)) {
+                    jsonNode.set(Constants.VALUE, diff.getValue());
+                }
                 break;
 
             default:
@@ -357,7 +361,30 @@ public final class JsonDiff {
 
             if (sourceType == NodeType.ARRAY && targetType == NodeType.ARRAY) {
                 //both are arrays
-                compareArray(path, source, target);
+
+                JsonNode firstElement = source.get(0);
+                HashMap<String, JsonNode> sourceJNodeById = new HashMap<>();
+                HashMap<String, JsonNode> targetJNodeById = new HashMap<>();
+                Optional<String> idKey = firstElement != null ? Arrays.stream(idsHandledByArrays).filter(firstElement::has).findFirst() : Optional.empty();
+                if (flags.contains(DiffFlags.TREAT_ARRAYS_AS_SETS) && idKey.isPresent()) {
+                    int i = 0;
+                    for (final JsonNode objNode : source) {
+                        String id = objNode.get(idKey.get()).asText();
+                        sourceJNodeById.put(id, objNode);
+                        sourceIndexById.put(id, i);
+                        i++;
+                    }
+                    int j = 0;
+                    for (final JsonNode objNode : target) {
+                        String id = objNode.get(idKey.get()).asText();
+                        targetJNodeById.put(id, objNode);
+                        targetIndexById.put(id, j);
+                        j++;
+                    }
+                    generateDiffs(path, mapper.valueToTree(sourceJNodeById), mapper.valueToTree(targetJNodeById));
+                } else {
+                    compareArray(path, source, target);
+                }
             } else if (sourceType == NodeType.OBJECT && targetType == NodeType.OBJECT) {
                 //both are json
                 compareObjects(path, source, target);
@@ -456,22 +483,50 @@ public final class JsonDiff {
             String key = keysFromSrc.next();
             if (!target.has(key)) {
                 //remove case
+                if (flags.contains(DiffFlags.TREAT_ARRAYS_AS_SETS) && sourceIndexById.containsKey(key)) {
+                    JsonPointer currPath = path.append(sourceIndexById.get(key));
+                    sourceIndexById.remove(key);
+                    if (flags.contains(DiffFlags.TREAT_ARRAYS_AS_SETS) && flags.contains(DiffFlags.EMIT_TEST_OPERATIONS))
+                        diffs.add(new Diff(Operation.TEST, currPath, source.get(key)));
+                    diffs.add(Diff.generateDiff(Operation.REMOVE, currPath, source.get(key)));
+                    continue;
+                }
                 JsonPointer currPath = path.append(key);
                 if (flags.contains(DiffFlags.EMIT_TEST_OPERATIONS))
                     diffs.add(new Diff(Operation.TEST, currPath, source.get(key)));
                 diffs.add(Diff.generateDiff(Operation.REMOVE, currPath, source.get(key)));
                 continue;
             }
-            JsonPointer currPath = path.append(key);
-            generateDiffs(currPath, source.get(key), target.get(key));
+            if (flags.contains(DiffFlags.TREAT_ARRAYS_AS_SETS) && sourceIndexById.containsKey(key)) {
+                JsonPointer currPath = path.append(sourceIndexById.get(key));
+                sourceIndexById.remove(key);
+                generateDiffs(currPath, source.get(key), target.get(key));
+            } else if (flags.contains(DiffFlags.TREAT_ARRAYS_AS_SETS) && targetIndexById.containsKey(key)){
+                JsonPointer currPath = path.append(targetIndexById.get(key));
+                targetIndexById.remove(key);
+                generateDiffs(currPath, source.get(key), target.get(key));
+            } else {
+                JsonPointer currPath = path.append(key);
+                generateDiffs(currPath, source.get(key), target.get(key));
+            }
         }
         Iterator<String> keysFromTarget = target.fieldNames();
         while (keysFromTarget.hasNext()) {
             String key = keysFromTarget.next();
             if (!source.has(key)) {
                 //add case
-                JsonPointer currPath = path.append(key);
-                diffs.add(Diff.generateDiff(Operation.ADD, currPath, target.get(key)));
+                if (flags.contains(DiffFlags.TREAT_ARRAYS_AS_SETS) && sourceIndexById.containsKey(key)) {
+                    JsonPointer currPath = path.append(sourceIndexById.get(key));
+                    sourceIndexById.remove(key);
+                    diffs.add(Diff.generateDiff(Operation.ADD, currPath, target.get(key)));
+                } else if (flags.contains(DiffFlags.TREAT_ARRAYS_AS_SETS) && targetIndexById.containsKey(key)) {
+                    JsonPointer currPath = path.append(targetIndexById.get(key));
+                    targetIndexById.remove(key);
+                    diffs.add(Diff.generateDiff(Operation.ADD, currPath, target.get(key)));
+                } else {
+                    JsonPointer currPath = path.append(key);
+                    diffs.add(Diff.generateDiff(Operation.ADD, currPath, target.get(key)));
+                }
             }
         }
     }
