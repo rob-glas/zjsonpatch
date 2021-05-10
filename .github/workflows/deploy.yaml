@@ -1,0 +1,18 @@
+name: Deploy
+on:
+  release:
+    types: [created]
+  jobs:
+    deploy:
+      runs-on: ubuntu-20.04
+      steps:
+        - uses: actions/checkout@v2
+        - name: Setup Java
+          uses: actions/setup-java@v2
+          with:
+            java-version: '15'
+            distribution: 'adopt'
+        - name: Publish package
+          run: mvn --batch-mode deploy
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
