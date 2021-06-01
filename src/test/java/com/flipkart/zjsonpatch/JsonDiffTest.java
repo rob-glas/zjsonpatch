@@ -173,7 +173,12 @@ public class JsonDiffTest {
         JsonNode sourceNode = objectMapper.readTree(source);
         JsonNode targetNode = objectMapper.readTree(target);
 
-        EnumSet<DiffFlags> flags = EnumSet.of(DiffFlags.ADD_ORIGINAL_VALUE_ON_REPLACE_AS_VALUE, DiffFlags.OMIT_MOVE_OPERATION, DiffFlags.OMIT_COPY_OPERATION, DiffFlags.TREAT_ARRAYS_AS_SETS);
+        EnumSet<DiffFlags> flags = EnumSet.of(
+                DiffFlags.ADD_ORIGINAL_VALUE_ON_REPLACE_AS_VALUE,
+                DiffFlags.OMIT_MOVE_OPERATION,
+                DiffFlags.OMIT_COPY_OPERATION,
+                DiffFlags.TREAT_ARRAYS_AS_SETS,
+                DiffFlags.COMPARE_ALL_NUMBERS_AS_BIG_DECIMAL);
         JsonNode patchNode = JsonDiff.asJson(sourceNode, targetNode, flags);
 
         String diff = patchNode.toString();
@@ -252,7 +257,12 @@ public class JsonDiffTest {
                         "{\"_id\":\"_id\",\"fields\":[{\"dataFormat\":\"quantity\",\"name\":\"soundPeak3\",\"uuid\":\"6d4aa503-4d7f-4373-a563-417edd8681f3\"},{\"dataFormat\":\"quantity\",\"name\":\"soundPeak\",\"uuid\":\"6d4aa503-4d7f-4373-a563-417edd8681f1\"},{\"dataFormat\":\"quantity\",\"name\":\"soundPeak2\",\"uuid\":\"6d4aa503-4d7f-4373-a563-417edd8681f2\"},{\"dataFormat\":\"quantity\",\"name\":\"soundPeak7\",\"uuid\":\"6d4aa503-4d7f-4373-a563-417edd8681f7\"}]}",
                         "{\"_id\":\"_id\",\"fields\":[{\"dataFormat\":\"quantity\",\"name\":\"soundPeak2\",\"uuid\":\"6d4aa503-4d7f-4373-a563-417edd8681f2\"},{\"dataFormat\":\"quantity\",\"name\":\"soundPeak\",\"uuid\":\"6d4aa503-4d7f-4373-a563-417edd8681f1\"},{\"dataFormat\":\"quantity\",\"name\":\"soundPeak8\",\"uuid\":\"6d4aa503-4d7f-4373-a563-417edd8681f3\"},{\"dataFormat\":\"quantity\",\"name\":\"soundPeak20\",\"uuid\":\"6d4aa503-4d7f-4373-a563-417edd8681f20\"}]}",
                         "[{\"op\":\"remove\",\"path\":\"/fields/3\",\"value\":{\"dataFormat\":\"quantity\",\"name\":\"soundPeak7\",\"uuid\":\"6d4aa503-4d7f-4373-a563-417edd8681f7\"}},{\"op\":\"replace\",\"value\":\"soundPeak3\",\"path\":\"/fields/0/name\"},{\"op\":\"add\",\"path\":\"/fields/3\",\"value\":{\"dataFormat\":\"quantity\",\"name\":\"soundPeak20\",\"uuid\":\"6d4aa503-4d7f-4373-a563-417edd8681f20\"}}]"
-                }
+                },
+                {
+                        "{\"values\":{\"344aa235-4d7f-4373-a563-417edd8685d2\":20.0,\"6d4aa503-4d7f-4373-a563-417edd8681f1\":65.4215557891}}",
+                        "{\"values\":{\"6d4aa503-4d7f-4373-a563-417edd8681f1\":65.4215557891,\"344aa235-4d7f-4373-a563-417edd8685d2\":20}}",
+                        "[]"
+                },
         };
     }
 }

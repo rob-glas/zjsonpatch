@@ -64,7 +64,7 @@ enum NodeType {
         TOKEN_MAP.put(JsonToken.START_ARRAY, ARRAY);
         TOKEN_MAP.put(JsonToken.VALUE_TRUE, BOOLEAN);
         TOKEN_MAP.put(JsonToken.VALUE_FALSE, BOOLEAN);
-        TOKEN_MAP.put(JsonToken.VALUE_NUMBER_INT, INTEGER);
+        TOKEN_MAP.put(JsonToken.VALUE_NUMBER_INT, NUMBER);
         TOKEN_MAP.put(JsonToken.VALUE_NUMBER_FLOAT, NUMBER);
         TOKEN_MAP.put(JsonToken.VALUE_NULL, NULL);
         TOKEN_MAP.put(JsonToken.START_OBJECT, OBJECT);
