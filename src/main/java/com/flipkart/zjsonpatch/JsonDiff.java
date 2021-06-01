@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.collections4.ListUtils;
 
+import java.math.BigDecimal;
 import java.util.*;
 
 /**
@@ -356,8 +357,18 @@ public final class JsonDiff {
 
     private void generateDiffs(JsonPointer path, JsonNode source, JsonNode target) {
         if (!source.equals(target)) {
+
             final NodeType sourceType = NodeType.getNodeType(source);
             final NodeType targetType = NodeType.getNodeType(target);
+
+            if (flags.contains(DiffFlags.COMPARE_ALL_NUMBERS_AS_BIG_DECIMAL) &&
+                    sourceType == NodeType.NUMBER && targetType == NodeType.NUMBER){
+                BigDecimal sourceVal = BigDecimal.valueOf(source.asDouble());
+                BigDecimal targetVal = BigDecimal.valueOf(target.asDouble());
+                if (sourceVal.equals(targetVal)) {
+                    return;
+                }
+            }
 
             if (sourceType == NodeType.ARRAY && targetType == NodeType.ARRAY) {
                 //both are arrays
@@ -486,7 +497,7 @@ public final class JsonDiff {
                 if (flags.contains(DiffFlags.TREAT_ARRAYS_AS_SETS) && sourceIndexById.containsKey(key)) {
                     JsonPointer currPath = path.append(sourceIndexById.get(key));
                     sourceIndexById.remove(key);
-                    if (flags.contains(DiffFlags.TREAT_ARRAYS_AS_SETS) && flags.contains(DiffFlags.EMIT_TEST_OPERATIONS))
+                    if (flags.contains(DiffFlags.EMIT_TEST_OPERATIONS))
                         diffs.add(new Diff(Operation.TEST, currPath, source.get(key)));
                     diffs.add(Diff.generateDiff(Operation.REMOVE, currPath, source.get(key)));
                     continue;

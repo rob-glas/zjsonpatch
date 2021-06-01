@@ -82,7 +82,9 @@ public enum DiffFlags {
      * as sets. This means that the order does not matter and the object is considered updated only if
      * there is another object with the same "id", "_id" or "uuid".
      */
-    TREAT_ARRAYS_AS_SETS;
+    TREAT_ARRAYS_AS_SETS,
+
+    COMPARE_ALL_NUMBERS_AS_BIG_DECIMAL;
 
     public static EnumSet<DiffFlags> defaults() {
         return EnumSet.of(OMIT_VALUE_ON_REMOVE);
